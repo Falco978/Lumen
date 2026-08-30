@@ -80,6 +80,8 @@ select.input{appearance:none;-webkit-appearance:none;cursor:pointer}
 .err.on{display:block}
 .typechips{display:flex;gap:8px}
 .typechips .chip{flex:1;text-align:center}
+.durrow{display:flex;gap:10px}
+.durrow .input{flex:1}
 .addbtns{display:flex;flex-direction:column;gap:10px;margin-top:22px}
 .bigbtn{width:100%;padding:15px;border-radius:26px;font-family:inherit;font-weight:500;font-size:15px;cursor:pointer;
   border:1px solid var(--gold);background:var(--gold);color:#fff}
@@ -213,7 +215,7 @@ nav button svg{width:23px;height:23px}
         <div class="typechips" id="typeChips"></div>
       </div>
       <div class="field"><input class="input" id="fYear" type="number" data-ph="fYearPh" inputmode="numeric"></div>
-      <div class="field"><input class="input" id="fDur" type="number" data-ph="fDurPh" inputmode="numeric"></div>
+      <div class="field"><div class="flabel" data-i="fDurL"></div><div id="durField"></div></div>
       <div class="field">
         <div class="flabel" data-i="fGenreL"></div>
         <select class="input" id="fGenre"></select>
@@ -293,7 +295,7 @@ const I={
   duelTitle:"Lequel tu préfères ?",duelSub:"Même note — aide-moi à les départager",
   hours:"heures vues",titles:"titres vus",films:"films",episodes:"séries & animes",
   topGenre:"Genre favori",decade:"Décennie préférée",rewatch:"Le plus revu",avg:"Note moyenne",
-  bilan:"Bilan 2026",share:"Créer ma carte à partager",min:"min",hLetter:"h",durMinPh:"Durée en minutes (optionnel)",durHrPh:"Durée totale en heures (optionnel)"},
+  bilan:"Bilan 2026",share:"Créer ma carte à partager",min:"min",hLetter:"h",durMinPh:"Durée en minutes (optionnel)",durHrPh:"Durée totale en heures (optionnel)",fDurL:"Durée (optionnel)",fHrPh:"Heures",fMinPh:"Minutes",fTotHrPh:"Heures totales (optionnel)"},
  en:{addTitle:"Add",addSub:"Add a movie, series or anime",
   fTitlePh:"Title…",fErr:"Enter a title first.",fTypeL:"Type",
   fYearPh:"Year (optional)",fGenreL:"Genre (optional)",fGenreNone:"—",
@@ -308,7 +310,7 @@ const I={
   duelTitle:"Which do you prefer?",duelSub:"Same rating — help me break the tie",
   hours:"hours watched",titles:"titles watched",films:"movies",episodes:"series & anime",
   topGenre:"Top genre",decade:"Top decade",rewatch:"Most rewatched",avg:"Average rating",
-  bilan:"2026 recap",share:"Create shareable card",min:"min",hLetter:"h",durMinPh:"Duration in minutes (optional)",durHrPh:"Total hours (optional)"}
+  bilan:"2026 recap",share:"Create shareable card",min:"min",hLetter:"h",durMinPh:"Duration in minutes (optional)",durHrPh:"Total hours (optional)",fDurL:"Duration (optional)",fHrPh:"Hours",fMinPh:"Minutes",fTotHrPh:"Total hours (optional)"}
 };
 let lang="fr";const t=k=>I[lang][k];
 
@@ -327,20 +329,22 @@ function hueOf(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%36
 function grad(it){const h=hueOf(it.title);return `linear-gradient(150deg,hsl(${h} 44% 47%),hsl(${(h+38)%360} 42% 30%))`;}
 function accent(it){return `hsl(${hueOf(it.title)} 46% 50%)`;}
 function typeLabel(ty){return t(ty);}
-function fmtLen(it){if(!it.mins)return typeLabel(it.type);
- return it.type==="film"?it.mins+" "+t('min'):Math.round(it.mins/60)+" "+t('hLetter');}
+function fmtHM(min){if(!min||min<=0)return "—";const h=Math.floor(min/60),m=Math.round(min%60);return h?(m?`${h}${t('hLetter')}${String(m).padStart(2,'0')}`:`${h}${t('hLetter')}`):`${m} ${t('min')}`;}
+function fmtLen(it){if(!it.mins)return typeLabel(it.type);return fmtHM(it.mins);}
 function metaLine(it){const p=[typeLabel(it.type)];if(it.year)p.push(it.year);
- if(it.mins)p.push(it.type==="film"?it.mins+" "+t('min'):Math.round(it.mins/60)+" "+t('hLetter'));
+ if(it.mins)p.push(fmtHM(it.mins));
  if(it.genre)p.push(G[it.genre][lang]);return p.join(" · ");}
 
 function applyI(){$$("[data-i]").forEach(e=>e.textContent=t(e.dataset.i));
  $$("[data-ph]").forEach(e=>e.placeholder=t(e.dataset.ph));document.documentElement.lang=lang;
- $("#fDur").placeholder=curType==="film"?t('durMinPh'):t('durHrPh');
- buildTypeChips();buildGenre();}
+ buildTypeChips();buildDurationField();buildGenre();}
 function buildTypeChips(){const host=$("#typeChips");const tys=["film","series","anime"];
  host.innerHTML=tys.map(ty=>`<button class="chip ${curType===ty?'on':''}" data-ty="${ty}">${t(ty)}</button>`).join("");
  host.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{curType=c.dataset.ty;
-  $("#fDur").placeholder=curType==="film"?t('durMinPh'):t('durHrPh');buildTypeChips();});}
+  buildTypeChips();buildDurationField();});}
+function buildDurationField(){const host=$("#durField");if(!host)return;
+ if(curType==="film")host.innerHTML=`<div class="durrow"><input class="input" id="fHr" type="number" inputmode="numeric" placeholder="${t('fHrPh')}"><input class="input" id="fMin" type="number" inputmode="numeric" placeholder="${t('fMinPh')}"></div>`;
+ else host.innerHTML=`<input class="input" id="fTotHr" type="number" inputmode="decimal" placeholder="${t('fTotHrPh')}">`;}
 function buildGenre(){const sel=$("#fGenre");const cur=sel.value;
  sel.innerHTML=`<option value="">${t('fGenreNone')}</option>`+Object.keys(G).map(g=>`<option value="${g}">${G[g][lang]}</option>`).join("");
  if(cur)sel.value=cur;}
@@ -369,11 +373,11 @@ function renderWatched(){chipRow($("#chips-w"),"w");const q=$("#wQ").value.trim(
  if(!ids.length){host.innerHTML=`<div class="empty">${t('emptyW').replace(/\n/g,'<br>')}</div>`;return;}
  host.innerHTML=ids.map((id,i)=>rowHTML(items[id],order.indexOf(id)+1)).join("");}
 
-function watchedHours(){let m=0;order.forEach(id=>{const it=items[id];if(it&&it.mins)
-  m+=it.mins*(it.type==="film"?1:(it.progress??1))*it.times;});return m/60;}
+function watchedMinutes(){let m=0;order.forEach(id=>{const it=items[id];if(it&&it.mins)
+  m+=it.mins*(it.type==="film"?1:(it.progress??1))*it.times;});return Math.round(m);}
 function renderStats(){const seen=order.filter(id=>items[id]);const host=$("#stats-body");
  if(!seen.length){host.innerHTML=`<div class="empty">${t('emptyW').replace(/\n/g,'<br>')}</div>`;return;}
- const hrs=watchedHours();const films=seen.filter(id=>items[id].type==="film").length;const shows=seen.length-films;
+ const films=seen.filter(id=>items[id].type==="film").length;const shows=seen.length-films;
  const avg=seen.reduce((s,id)=>s+items[id].rating,0)/seen.length;
  const rew=seen.map(id=>({id,x:items[id].times})).sort((a,b)=>b.x-a.x)[0];
  const gc={};seen.forEach(id=>{const g=items[id].genre;if(g)gc[g]=(gc[g]||0)+1;});
@@ -387,7 +391,7 @@ function renderStats(){const seen=order.filter(id=>items[id]);const host=$("#sta
  fine+=`<div class="finerow"><span class="fk">${t('avg')}</span><span class="fv" style="color:var(--gold)">${avg.toFixed(1)}</span></div>`;
  host.innerHTML=`<div class="statgrid">
    <div class="stat"><div class="n g">${seen.length}</div><div class="l">${t('titles')}</div></div>
-   <div class="stat"><div class="n">${hrs>0?Math.round(hrs):"—"}</div><div class="l">${t('hours')}</div></div>
+   <div class="stat"><div class="n">${fmtHM(watchedMinutes())}</div><div class="l">${t('hours')}</div></div>
    <div class="stat"><div class="n">${films}</div><div class="l">${t('films')}</div></div>
    <div class="stat"><div class="n">${shows}</div><div class="l">${t('episodes')}</div></div></div>
   <div class="fineblock">${fine}</div>
@@ -397,11 +401,13 @@ function renderStats(){const seen=order.filter(id=>items[id]);const host=$("#sta
 function addItem(markSeen){const title=$("#fTitle").value.trim();
  if(!title){$("#fErr").classList.add("on");return;}
  $("#fErr").classList.remove("on");
- const year=parseInt($("#fYear").value)||null;const durRaw=parseFloat($("#fDur").value)||null;
- const mins=durRaw?(curType==="film"?Math.round(durRaw):Math.round(durRaw*60)):null;
+ const year=parseInt($("#fYear").value)||null;
+ let mins=null;
+ if(curType==="film"){const h=parseInt($("#fHr")?.value)||0,mn=parseInt($("#fMin")?.value)||0;mins=(h*60+mn)||null;}
+ else{const th=parseFloat($("#fTotHr")?.value)||null;mins=th?Math.round(th*60):null;}
  const genre=$("#fGenre").value||null;
  const id=uid++;items[id]={id,title,type:curType,year,mins,genre,status:"wl",rating:null,times:1,progress:1};
- $("#fTitle").value="";$("#fYear").value="";$("#fDur").value="";$("#fGenre").value="";
+ $("#fTitle").value="";$("#fYear").value="";$("#fGenre").value="";buildDurationField();
  if(markSeen){renderAll();openDetail(id);}else{renderAll();switchTab("watchlist");}}
 
 function openDetail(id){detailId=id;const it=items[id];const h=hueOf(it.title);const seen=it.status==="seen";
@@ -454,7 +460,7 @@ function resolveDuel(winId){const {newId,tieId}=pendingDuel;
  $("#duel").classList.remove("on");pendingDuel=null;finishSave();}
 function finishSave(){closeDetail();renderAll();switchTab("watched");}
 
-function shareCard(){const top=order.slice(0,5);const hrs=Math.round(watchedHours());const cnt=order.length;
+function shareCard(){const top=order.slice(0,5);const hrs=fmtHM(watchedMinutes());const cnt=order.length;
  const w=document.createElement("div");
  w.style.cssText="position:fixed;inset:0;z-index:80;background:rgba(20,22,30,.55);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:22px";
  w.innerHTML=`<div style="width:100%;max-width:360px;background:var(--surface-op);color:var(--text);border-radius:26px;padding:28px;box-shadow:var(--shadow)">
@@ -463,7 +469,7 @@ function shareCard(){const top=order.slice(0,5);const hrs=Math.round(watchedHour
    <div style="font-size:23px;font-weight:500;margin:14px 0 20px">${t('bilan')}</div>
    <div style="display:flex;gap:26px;margin-bottom:22px">
     <div><div style="font-size:38px;font-weight:300;color:var(--gold);line-height:1">${cnt}</div><div style="font-size:12px;color:var(--muted);margin-top:5px">${t('titles')}</div></div>
-    <div><div style="font-size:38px;font-weight:300;color:var(--text);line-height:1">${hrs>0?hrs:"—"}</div><div style="font-size:12px;color:var(--muted);margin-top:5px">${t('hours')}</div></div></div>
+    <div><div style="font-size:38px;font-weight:300;color:var(--text);line-height:1">${hrs}</div><div style="font-size:12px;color:var(--muted);margin-top:5px">${t('hours')}</div></div></div>
    ${top.map((id,i)=>{const it=items[id];return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:11px">
     <span style="color:var(--muted);font-weight:500;width:14px;font-size:13px">${i+1}</span>
     <div style="width:5px;height:34px;border-radius:4px;background:${accent(it)}"></div>
